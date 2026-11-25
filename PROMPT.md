@@ -1,0 +1,34 @@
+# Bertie Scan: full prompt
+
+Build a phone document scanner for Bertie that replaces paid scanner apps. No adverts, no account, no fees, and nothing is ever uploaded: everything happens on the phone. It must run on iPhone and Android, so it is an installable web app (PWA) made of plain HTML, CSS and JavaScript with no build step. The whole app is the `docs` folder.
+
+## What it does
+- Home: list of scans with a small picture, name, number of pages and date; search when there are four or more; big buttons Photos and Scan; settings.
+- Camera: live picture with the page outlined. Yellow means found, green means ready. Takes the picture by itself when the page is steady for about a second (Auto), or by tapping (By hand). After a picture it waits until the page moves or changes before the next one. Torch where the phone allows it, choose from photos, or use the phone's own camera (sharper for small cards). Several pages in a row, then Done.
+- Every page: edges found, straightened to its true shape (snaps to A4 or ID card), shadows removed and paper made white.
+- Page: looks Clean colour, Grey, Black & white, Photo; crop by dragging corners or sides with a magnifier; rotate; brightness and contrast; read text and copy it; give all pages the same look; swipe between pages; double tap to zoom; delete.
+- Document: rename, add pages, drag pages into order, delete.
+- Save or send, always starting on PDF:
+  - PDF: A4, same shape as the scan, or two per page (ID card front and back at real size); small, normal or best quality; optional searchable text; optional page numbers.
+  - Word (.docx, opens in Word and Google Docs): words you can edit (letter or book, or receipt/table which keeps rows together), or a picture of each page.
+  - Pictures (JPG).
+  - Then the phone's share sheet (WhatsApp, email, Drive, Files), download, or look at it. Chrome on Android does not allow sharing .docx or .zip directly, so there it is download first.
+- Settings: auto capture on or off, back up all scans as one zip of PDFs, download the text reader for use without internet.
+- Works without internet after the first visit. Light and dark.
+
+## How it is made
+- `docs/js/detect.js` finds the page (own code: wipe out writing, edges, lines, best four-sided shape; second method for patterned tablecloths; fine fit on a bigger picture).
+- `docs/js/imageproc.js` straightens and cleans (own code).
+- `docs/js/pdf.js` and `docs/js/docx.js` write the files (own code, no libraries).
+- `docs/js/ocr.js` reads English and Afrikaans with Tesseract.js 7 kept in `docs/vendor` (free, Apache 2.0; refreshed with `npm install` then `npm run vendor`).
+- `docs/js/worker.js` does the heavy work in the background; `store.js` keeps scans in the phone's IndexedDB; `camera.js`, `ui.js`, `engine.js`, `app.js` are the rest.
+- `docs/sw.js` keeps the app on the phone. **Change `VERSION` in it with every change**, otherwise phones keep the old one. Scans are not touched by updates.
+- On localhost the offline part is off unless the address has `?sw=1`.
+
+## Checking it
+- `npm start`, then http://localhost:5190 (preview name `bertie-scan`).
+- Page finding: `python tools/make_test_photos.py <folder>` then `node tools/check-detect.mjs <folder>`. On 25 November 2026: 20 of 22 right, to about 0.1% of the photo's width; the two misses are a loud red and white checked tablecloth.
+
+## Limits
+- Handwriting cannot be turned into editable words well; use "Picture of the page".
+- Scans live only on the phone. Removing the app or clearing the browser's data removes them, so use Back up.
