@@ -1,5 +1,6 @@
 // Ties the pieces together: adds pages, reworks them, and makes the finished files.
 import * as store from './store.js';
+import { DEV } from './store.js';
 import { buildPdf } from './pdf.js';
 import { buildDocx, zip } from './docx.js';
 import * as ocr from './ocr.js';
@@ -9,7 +10,7 @@ class Helper {
   start() {
     this.w = new Worker(new URL('./worker.js', import.meta.url), { type: 'module' });
     this.w.onmessage = e => { const p = this.wait.get(e.data.id); this.wait.delete(e.data.id); if (p) e.data.err ? p.bad(new Error(e.data.err)) : p.ok(e.data.ok); };
-    this.w.onerror = e => { const all = [...this.wait.values()]; this.wait.clear(); this.w = null; all.forEach(p => p.bad(new Error(e.message || 'The phone ran out of memory. Close other apps and try again.'))); };
+    this.w.onerror = e => { const all = [...this.wait.values()]; this.wait.clear(); this.w = null; all.forEach(p => p.bad(new Error(e.message || `The ${DEV} ran out of memory. Close other apps and try again.`))); };
   }
   call(op, args, transfer = []) {
     if (!this.w) this.start();

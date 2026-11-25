@@ -1,16 +1,21 @@
 import { h, icon, blobUrl, setup, go, swap, refresh, back, sheet, confirmBox, toast, busy } from './ui.js';
 import * as store from './store.js';
+import { DEV } from './store.js';
 import * as E from './engine.js';
 import { Camera, Steady } from './camera.js';
 import { isConvex, orderCorners } from './detect.js';
 import { plainText } from './ocr.js';
 
-export const VERSION = '1.0';
+export const VERSION = '1.1';
 const standalone = matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
-const isApple = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+const isApple = DEV !== 'phone';
+// Apple lets only the person put an app on the Home Screen, so there the app can only show the steps
+const appleBrowser = (navigator.userAgent.match(/CriOS|EdgiOS|FxiOS|GSA|OPT|DuckDuckGo/) || [''])[0];
+const inSafari = isApple && !appleBrowser && /Version\/[\d.]+.*Safari\//.test(navigator.userAgent);
+const tooOld = typeof OffscreenCanvas === 'undefined';
 let installEvent = null;
 window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); installEvent = e; });
-const oops = e => { console.error(e); toast(/quota|storage/i.test(String(e && e.message)) ? 'The phone is out of storage space. Delete some old scans first.' : 'That did not work: ' + (e && e.message || e), 5000); };
+const oops = e => { console.error(e); toast(/quota|storage/i.test(String(e && e.message)) ? `The ${DEV} is out of storage space. Delete some old scans first.` : 'That did not work: ' + (e && e.message || e), 5000); };
 const pagesWord = n => `${n} page${n === 1 ? '' : 's'}`;
 const kb = n => n > 1048576 ? (n / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(n / 1024)) + ' KB';
 
@@ -45,6 +50,29 @@ async function addPhotos(docId, files) {
   return docId;
 }
 
+/* ---------- putting the app on the Home Screen ---------- */
+async function installHelp() {
+  if (installEvent) { installEvent.prompt(); return; }
+  const n = (await store.allDocs()).length;
+  const step = (ic, ...t) => h('li', null, h('span.step-ic', null, icon(ic, 26)), h('div', null, ...t));
+  const b = t => h('b', null, t);
+  await sheet(`Put it on your ${DEV}`, body => {
+    if (!isApple) return body.append(h('p', null, 'Open the ⋮ menu at the top right of Chrome, then tap "Add to Home screen" or "Install app".'));
+    if (!inSafari) {
+      body.append(h('p', null, b('Open this page in Safari first.'), ' Copy the address here, open Safari, hold your finger on the address bar and tap Paste and Go. Then tap Show me how again.'),
+        h('button.btn.wide', { onclick: async () => { const u = location.origin + location.pathname; try { await navigator.clipboard.writeText(u); toast('Address copied. Now open Safari.'); } catch { toast(u, 8000); } } }, icon('copy'), 'Copy the address'));
+      return;
+    }
+    body.append(h('ol.steps', null,
+      step('share', b('Tap Share'), h('small', null, DEV === 'iPad' ? 'The square with an arrow pointing up, at the top right of Safari.' : 'The square with an arrow pointing up. If you do not see it, tap the three dots first.')),
+      step('dots', b('Tap View More'), h('small', null, 'If it is not there, scroll down the list instead.')),
+      step('plusbox', b('Tap Add to Home Screen'), h('small', null, 'Not in the list? Scroll to the bottom, tap Edit Actions, and tap the plus next to it.')),
+      step('check', b('Turn on Open as Web App, then tap Add'), h('small', null, 'If there is no such switch, just tap Add.')),
+      step('frame', b('Leave Safari and open Bertie Scan from its new icon'), h('small', null, 'From then on always use the icon.'))),
+      n && h('p.warn', null, `The ${n === 1 ? 'scan' : n + ' scans'} you made here will stay in Safari, because the new app starts empty. Save or send ${n === 1 ? 'it' : 'them'} first.`) || '');
+  });
+}
+
 /* ---------- home: all the scans ---------- */
 function home() {
   const list = h('div.docs'), q = h('input', { type: 'search', placeholder: 'Search your scans', 'aria-label': 'Search your scans', oninput: () => draw() });
@@ -60,18 +88,19 @@ function home() {
         h('button.doc-open', { onclick: () => go('doc', { id: d.id }) }, h('span.doc-pic', null, im), h('span.doc-text', null, h('b', null, d.name), h('small', null, `${pagesWord(d.pages.length)} · ${E.niceDate(d.updated)}`))),
         h('button.iconbtn', { 'aria-label': 'More for ' + d.name, onclick: () => docMenu(d).then(load) }, icon('dots')));
     }));
-    if (!docs.length) list.append(h('div.empty', null, h('img', { src: 'icons/icon.svg', alt: '' }), h('h2', null, 'Scan your first page'), h('p', null, 'Lay the paper flat on something darker than the paper, tap Scan, and hold the phone above it. It finds the edges and takes the picture by itself.')));
+    if (!docs.length) list.append(h('div.empty', null, h('img', { src: 'icons/icon.svg', alt: '' }), h('h2', null, 'Scan your first page'), h('p', null, `Lay the paper flat on something darker than the paper, tap Scan, and hold the ${DEV} above it. It finds the edges and takes the picture by itself.`)));
     else if (!show.length) list.append(h('p.muted', null, 'Nothing with that name.'));
   };
   const load = async () => { docs = await store.allDocs(); draw(); };
   const searchBox = h('label.search', { hidden: true }, icon('search', 20), q);
   load().catch(oops);
   const install = standalone || E.settings.get('hideInstall', false) ? null : h('div.install', null,
-    h('div', null, h('b', null, 'Put Bertie Scan on your phone'), h('p', null, isApple ? 'Tap the Share button in Safari, then "Add to Home Screen".' : 'It opens like any other app and works without internet.')),
-    h('div.row', null, !isApple && h('button.btn.small', { onclick: async () => { if (installEvent) { installEvent.prompt(); } else sheet('Install', b => b.append(h('p', null, 'Open the ⋮ menu at the top right of Chrome, then tap "Add to Home screen" or "Install app".'))); } }, 'Install'),
+    h('div', null, h('b', null, `Put Bertie Scan on your ${DEV}`), h('p', null, 'It opens like any other app and works without internet.')),
+    h('div.row', null, h('button.btn.small', { onclick: installHelp }, isApple ? 'Show me how' : 'Install'),
       h('button.btn.small.ghost', { onclick: e => { E.settings.set('hideInstall', true); e.target.closest('.install').remove(); } }, 'Not now')));
   return h('main.screen.home', null,
     h('header.top', null, h('h1', null, 'Bertie Scan'), h('button.iconbtn', { 'aria-label': 'Settings', onclick: settingsSheet }, icon('gear'))),
+    tooOld && h('div.install', null, h('b', null, `This ${DEV} needs an update`), h('p', null, isApple ? `Bertie Scan needs iPadOS or iOS 16.4 or newer. Open Settings, General, Software Update.` : 'Please update Chrome in the Play Store.')),
     install, searchBox, list,
     h('div.dock', null,
       h('button.btn.ghost.tall', { onclick: async () => { const id = await addPhotos(null, await pickPhotos()); if (id) go('doc', { id }); } }, icon('photos'), 'Photos'),
@@ -94,13 +123,13 @@ async function docMenu(d) {
     h('button.red', { onclick: () => s.finish('delete') }, icon('trash'), 'Delete'))));
   if (v === 'rename') await rename(d);
   if (v === 'share') await exportSheet(d.id);
-  if (v === 'delete' && await confirmBox('Delete this scan?', `"${d.name}" (${pagesWord(d.pages.length)}) will be removed from this phone. This cannot be undone.`, 'Delete', true)) { await store.deleteDoc(await store.getDoc(d.id) || d); toast('Deleted'); return 'deleted'; }
+  if (v === 'delete' && await confirmBox('Delete this scan?', `"${d.name}" (${pagesWord(d.pages.length)}) will be removed from this ${DEV}. This cannot be undone.`, 'Delete', true)) { await store.deleteDoc(await store.getDoc(d.id) || d); toast('Deleted'); return 'deleted'; }
   return v;
 }
 
 async function settingsSheet() {
   let used = '';
-  try { const e = await navigator.storage.estimate(); used = `Your scans use ${kb(e.usage || 0)} on this phone.`; } catch { /* not known */ }
+  try { const e = await navigator.storage.estimate(); used = `Your scans use ${kb(e.usage || 0)} on this ${DEV}.`; } catch { /* not known */ }
   const n = (await store.allDocs()).length;
   const act = await sheet('Settings', (b, s) => {
     const auto = h('input', { type: 'checkbox', checked: E.settings.get('auto', true), onchange: e => E.settings.set('auto', e.target.checked) });
@@ -110,13 +139,15 @@ async function settingsSheet() {
         await E.ocr.warm(); ready.textContent = 'Done';
       },
     }, 'Download the text reader now');
-    b.append(
-      h('label.switch', null, h('span', null, h('b', null, 'Take the picture by itself'), h('small', null, 'When the page is in view and the phone is still')), auto),
-      h('div.block', null, h('b', null, 'Back up'), h('p.muted', null, 'Your scans live only on this phone. Make one file with a PDF of every scan, and keep it in Google Drive or on your computer.'), h('button.btn.ghost', { disabled: !n, onclick: () => s.finish('backup') }, `Back up ${n === 1 ? 'my scan' : `all ${n} scans`}`)),
+    b.append(...[
+      h('label.switch', null, h('span', null, h('b', null, 'Take the picture by itself'), h('small', null, `When the page is in view and the ${DEV} is still`)), auto),
+      h('div.block', null, h('b', null, 'Back up'), h('p.muted', null, `Your scans live only on this ${DEV}. Make one file with a PDF of every scan, and keep it in Google Drive or on your computer.`), h('button.btn.ghost', { disabled: !n, onclick: () => s.finish('backup') }, `Back up ${n === 1 ? 'my scan' : `all ${n} scans`}`)),
       h('div.block', null, h('b', null, 'Use without internet'), h('p.muted', null, 'Scanning and PDF always work without internet. Reading the words (for Word files and searchable PDFs) needs one download first.'), ready),
+      !standalone && h('div.block', null, h('b', null, `Put it on your ${DEV}`), h('p.muted', null, 'Then it opens from its own icon, like any other app.'), h('button.btn.ghost', { onclick: () => s.finish('install') }, 'Show me how')),
       h('p.muted', null, `${used} Nothing is ever uploaded. No adverts, no account, no fees.`),
-      h('p.muted', null, `Bertie Scan ${VERSION}. Reads text with the free Tesseract engine (Apache 2.0).`));
+      h('p.muted', null, `Bertie Scan ${VERSION}. Reads text with the free Tesseract engine (Apache 2.0).`)].filter(Boolean));
   });
+  if (act === 'install') await installHelp();
   if (act === 'backup') {
     const b = busy('Making the backup…');
     try { const f = await E.backupAll(m => b.say(m)); b.done(); if (f) await doneSheet([f]); } catch (e) { b.done(); oops(e); }
@@ -221,8 +252,8 @@ function camera({ docId }) {
       if (!running) return;
       area.replaceChildren(h('div.cam-fail', null,
         h('h2', null, e.name === 'NotAllowedError' ? 'The camera is blocked' : 'The camera could not start'),
-        h('p', null, e.name === 'NotAllowedError' ? 'Allow the camera for Bertie Scan in your phone settings, then open the app again. Or use the phone\'s own camera here:' : 'You can use the phone\'s own camera instead:'),
-        h('button.btn.main', { onclick: ownCamera }, icon('camera'), 'Use the phone camera')));
+        h('p', null, e.name === 'NotAllowedError' ? `Allow the camera for Bertie Scan in your ${DEV} settings, then open the app again. Or use the ${DEV}'s own camera here:` : `You can use the ${DEV}'s own camera instead:`),
+        h('button.btn.main', { onclick: ownCamera }, icon('camera'), `Use the ${DEV} camera`)));
     }
   }
   async function ownCamera() {
@@ -243,7 +274,7 @@ function camera({ docId }) {
   let wake = null;
   if (navigator.wakeLock) navigator.wakeLock.request('screen').then(w => { if (running) wake = w; else w.release(); }).catch(() => {});
   const el = h('main.screen.cam', null,
-    h('div.cam-top', null, h('button.iconbtn.light', { 'aria-label': 'Close', onclick: () => leave(true) }, icon('close')), autoBtn, torch, h('button.iconbtn.light', { 'aria-label': 'Use the phone camera (sharper for small cards)', onclick: ownCamera }, icon('camera'))),
+    h('div.cam-top', null, h('button.iconbtn.light', { 'aria-label': 'Close', onclick: () => leave(true) }, icon('close')), autoBtn, torch, h('button.iconbtn.light', { 'aria-label': `Use the ${DEV} camera (sharper for small cards)`, onclick: ownCamera }, icon('camera'))),
     area,
     h('div.cam-bottom', null, h('button.iconbtn.light.big', { 'aria-label': 'Choose from photos', onclick: fromPhotos }, icon('photos', 28)), ring, h('div.cam-right', null, pile, doneBtn)));
   el._leave = () => { running = false; cam.stop(); document.removeEventListener('visibilitychange', vis); window.removeEventListener('resize', fit); if (wake) wake.release().catch(() => {}); if (lastThumb) URL.revokeObjectURL(lastThumb); };
@@ -292,7 +323,7 @@ function doc({ id }) {
   load().catch(oops);
   return h('main.screen', null,
     h('header.top', null, h('button.iconbtn', { 'aria-label': 'Back', onclick: back }, icon('back')), title,
-      h('button.iconbtn', { 'aria-label': 'Delete this scan', onclick: async () => { if (await confirmBox('Delete this scan?', `"${d.name}" (${pagesWord(d.pages.length)}) will be removed from this phone. This cannot be undone.`, 'Delete', true)) { await store.deleteDoc(d); await back(); toast('Deleted'); } } }, icon('trash'))),
+      h('button.iconbtn', { 'aria-label': 'Delete this scan', onclick: async () => { if (await confirmBox('Delete this scan?', `"${d.name}" (${pagesWord(d.pages.length)}) will be removed from this ${DEV}. This cannot be undone.`, 'Delete', true)) { await store.deleteDoc(d); await back(); toast('Deleted'); } } }, icon('trash'))),
     sub, grid,
     h('div.dock', null,
       h('button.btn.ghost.tall', { onclick: async () => { const f = await pickPhotos(); if (f.length) { await addPhotos(id, f); load(); } } }, icon('photos'), 'Photos'),
@@ -554,8 +585,8 @@ function doneSheet(files) {
   };
   return sheet('Your file is ready', (b, s) => {
     b.append(...[h('div.ready', null, h('div.ready-ic', null, icon('check', 30)), h('div', null, h('b', null, files.length > 1 ? `${files.length} pictures` : files[0].name), h('small', null, kb(total)))),
-      canShare && h('button.btn.main.wide', { onclick: async () => { try { await navigator.share({ files, title: files[0].name }); s.finish('shared'); } catch (e) { if (e.name !== 'AbortError') toast('The phone could not share this. Use Download instead.'); } } }, icon('share'), isApple ? 'Send or save to Files' : 'Send (WhatsApp, email, Drive)'),
-      h('button.btn.wide' + (canShare ? '.ghost' : '.main'), { onclick: save }, icon('download'), 'Download to this phone'),
+      canShare && h('button.btn.main.wide', { onclick: async () => { try { await navigator.share({ files, title: files[0].name }); s.finish('shared'); } catch (e) { if (e.name !== 'AbortError') toast(`The ${DEV} could not share this. Use Download instead.`); } } }, icon('share'), isApple ? 'Send or save to Files' : 'Send (WhatsApp, email, Drive)'),
+      h('button.btn.wide' + (canShare ? '.ghost' : '.main'), { onclick: save }, icon('download'), `Download to this ${DEV}`),
       files.length === 1 && files[0].type === 'application/pdf' && h('button.btn.ghost.wide', { onclick: () => { const u = URL.createObjectURL(files[0]); if (!window.open(u, '_blank')) location.href = u; setTimeout(() => URL.revokeObjectURL(u), 120000); } }, icon('open'), 'Look at it'),
       !canShare && navigator.share && h('p.muted', null, 'To send it: download it, then open it from your Downloads and tap Share.')].filter(Boolean));
   });
@@ -567,5 +598,8 @@ go('home');
 window.__bertie = { store, E }; // used by the tests
 
 if ('serviceWorker' in navigator && (location.hostname !== 'localhost' || /[?&]sw=1/.test(location.search))) {
+  // a new version takes over straight away, but never in the middle of something
+  const had = navigator.serviceWorker.controller;
+  navigator.serviceWorker.addEventListener('controllerchange', () => { if (had && document.querySelector('main.home') && !document.querySelector('.sheet-wrap, .busy')) location.reload(); });
   navigator.serviceWorker.register('sw.js').catch(() => {});
 }

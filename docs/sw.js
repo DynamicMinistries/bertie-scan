@@ -1,6 +1,6 @@
 // Keeps the whole app on the phone so it opens and works without internet.
 // Change VERSION with every change to the app, otherwise phones keep the old one.
-const VERSION = 'bs-1.0.0', SHELL = VERSION, ENGINE = 'bs-engine-7.0.0';
+const VERSION = 'bs-1.1.0', SHELL = VERSION, ENGINE = 'bs-engine-7.0.0';
 const FILES = ['./', 'index.html', 'app.css', 'manifest.webmanifest', 'icons/icon.svg', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/apple-180.png',
   ...['app', 'ui', 'store', 'engine', 'camera', 'detect', 'imageproc', 'pdf', 'docx', 'ocr', 'worker'].map(f => `js/${f}.js`)];
 self.addEventListener('install', e => e.waitUntil(caches.open(SHELL).then(c => c.addAll(FILES.map(f => new Request(f, { cache: 'reload' })))).then(() => self.skipWaiting())));

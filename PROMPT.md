@@ -1,6 +1,6 @@
-# Bertie Scan: full prompt
+# Bertie Scan: full prompt (version 1.1)
 
-Build a phone document scanner for Bertie that replaces paid scanner apps. No adverts, no account, no fees, and nothing is ever uploaded: everything happens on the phone. It must run on iPhone and Android, so it is an installable web app (PWA) made of plain HTML, CSS and JavaScript with no build step. The whole app is the `docs` folder.
+Build a phone and iPad document scanner for Bertie that replaces paid scanner apps. No adverts, no account, no fees, and nothing is ever uploaded: everything happens on the phone. It must run on iPhone, iPad and Android, so it is an installable web app (PWA) made of plain HTML, CSS and JavaScript with no build step. The whole app is the `docs` folder.
 
 ## What it does
 - Home: list of scans with a small picture, name, number of pages and date; search when there are four or more; big buttons Photos and Scan; settings.
@@ -15,6 +15,9 @@ Build a phone document scanner for Bertie that replaces paid scanner apps. No ad
   - Then the phone's share sheet (WhatsApp, email, Drive, Files), download, or look at it. Chrome on Android does not allow sharing .docx or .zip directly, so there it is download first.
 - Settings: auto capture on or off, back up all scans as one zip of PDFs, download the text reader for use without internet.
 - Works without internet after the first visit. Light and dark.
+- Says iPad, iPhone or phone, depending on where it runs.
+- Putting it on the Home Screen: a card on the home screen (until it is installed or put away) and a place in settings. Android: Install button. iPhone and iPad: Apple does not let a website show an install button, so "Show me how" gives the steps: Share, View More, Add to Home Screen (Edit Actions if it is missing), turn on Open as Web App, Add, open from the icon. In another browser it first offers the address to paste in Safari. It warns that scans made in Safari stay in Safari, because the installed app starts empty.
+- iPhone and iPad need iOS or iPadOS 16.4 or newer; older ones are told to update.
 
 ## Where it lives
 - Live at https://dynamicministries.github.io/bertie-scan/ (GitHub Pages, free, https). `Open Bertie Scan on phone.png` is a square code that opens it.
@@ -36,7 +39,8 @@ Build a phone document scanner for Bertie that replaces paid scanner apps. No ad
 - Page finding: `python tools/make_test_photos.py <folder>` then `node tools/check-detect.mjs <folder>`. On 25 November 2026: 20 of 22 right, to about 0.1% of the photo's width; the two misses are a loud red and white checked tablecloth.
 
 - Live site on 25 November 2026 in a separate Chrome at phone size: can be installed, finds and straightens a page, reads English and Afrikaans, makes PDF and Word, opens the camera. The same with the internet cut off, and scans were still there after closing and opening again.
-- Still to check: a real phone.
+- Version 1.1 checked while pretending to be an iPad (upright and sideways, Safari, Chrome, and opened from the icon), an iPhone and an Android phone.
+- Still to check: scanning on a real iPad or phone.
 
 ## Limits
 - Handwriting cannot be turned into editable words well; use "Picture of the page".

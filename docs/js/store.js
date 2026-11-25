@@ -1,4 +1,6 @@
 // Keeps the scans on the phone (IndexedDB). Nothing is uploaded anywhere.
+const pad = /ipad/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+export const DEV = pad ? 'iPad' : /iphone|ipod/i.test(navigator.userAgent) ? 'iPhone' : 'phone';
 let dbp;
 function open() {
   return dbp || (dbp = new Promise((ok, bad) => {
@@ -22,7 +24,7 @@ async function tx(stores, mode, fn) {
     if (q && 'onsuccess' in q) q.onsuccess = () => { out = q.result; };
     t.oncomplete = () => ok(out);
     t.onerror = () => bad(t.error);
-    t.onabort = () => bad(t.error || new Error('The phone is out of storage space.'));
+    t.onabort = () => bad(t.error || new Error(`The ${DEV} is out of storage space.`));
   });
 }
 

@@ -50,6 +50,11 @@ small { display: block; font-size: 14px; color: var(--muted); font-weight: 400; 
 .install { margin: 4px 16px 14px; padding: 16px; border-radius: 18px; background: var(--soft); }
 .install p { margin: 2px 0 0; color: var(--muted); font-size: 15px; }
 .install .row > .btn { flex: 0 1 auto; } .install .ghost { background: transparent; }
+.steps { list-style: none; margin: 4px 0 8px; padding: 0; counter-reset: n; } .steps li { display: flex; gap: 14px; align-items: center; padding: 11px 0; border-top: 1px solid var(--line); } .steps li:first-child { border-top: 0; }
+.steps li > div { flex: 1; min-width: 0; } .step-ic { width: 48px; height: 48px; border-radius: 14px; background: var(--soft); color: var(--brand); display: grid; place-items: center; flex: none; position: relative; }
+.step-ic::after { counter-increment: n; content: counter(n); position: absolute; top: -7px; left: -7px; min-width: 22px; height: 22px; border-radius: 11px; background: var(--brand); color: var(--brand-ink); font-size: 13px; font-weight: 700; line-height: 22px; text-align: center; }
+.steps li:nth-child(2) .ic { stroke-width: 3.6; }
+.warn { background: var(--soft); border-radius: 14px; padding: 12px 14px; margin: 6px 0 0; font-weight: 600; }
 .search { display: flex; align-items: center; gap: 10px; margin: 0 16px 12px; padding: 0 14px; height: 48px; border-radius: 14px; background: var(--card); border: 1px solid var(--line); color: var(--muted); }
 .search input { flex: 1; min-width: 0; border: 0; background: none; outline: 0; color: var(--ink); }
 .docs { padding: 0 16px; display: grid; gap: 10px; }
