@@ -16,6 +16,12 @@ Build a phone document scanner for Bertie that replaces paid scanner apps. No ad
 - Settings: auto capture on or off, back up all scans as one zip of PDFs, download the text reader for use without internet.
 - Works without internet after the first visit. Light and dark.
 
+## Where it lives
+- Live at https://dynamicministries.github.io/bertie-scan/ (GitHub Pages, free, https). `Open Bertie Scan on phone.png` is a square code that opens it.
+- Code: https://github.com/DynamicMinistries/bertie-scan (public). Pages serves the `docs` folder of `main`; a push to `main` puts the change online in about a minute.
+- Everything here is public, so never put scans, passwords, keys or private details in this folder. Commits use the GitHub no-reply address.
+- Keep the address. Scans belong to the address on each phone, so a move would leave them behind.
+
 ## How it is made
 - `docs/js/detect.js` finds the page (own code: wipe out writing, edges, lines, best four-sided shape; second method for patterned tablecloths; fine fit on a bigger picture).
 - `docs/js/imageproc.js` straightens and cleans (own code).
@@ -28,6 +34,9 @@ Build a phone document scanner for Bertie that replaces paid scanner apps. No ad
 ## Checking it
 - `npm start`, then http://localhost:5190 (preview name `bertie-scan`).
 - Page finding: `python tools/make_test_photos.py <folder>` then `node tools/check-detect.mjs <folder>`. On 25 November 2026: 20 of 22 right, to about 0.1% of the photo's width; the two misses are a loud red and white checked tablecloth.
+
+- Live site on 25 November 2026 in a separate Chrome at phone size: can be installed, finds and straightens a page, reads English and Afrikaans, makes PDF and Word, opens the camera. The same with the internet cut off, and scans were still there after closing and opening again.
+- Still to check: a real phone.
 
 ## Limits
 - Handwriting cannot be turned into editable words well; use "Picture of the page".
